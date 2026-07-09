@@ -1,0 +1,57 @@
+{# EOSL.ai lifecycle panel, rendered on the right column of Device and Device Type pages. #}
+<div class="card">
+  <h2 class="card-header">
+    Hardware End-of-Life
+    <a href="https://eosl.ai/" target="_blank" rel="noopener" class="float-end text-muted" title="Data source: EOSL.ai" style="font-size:0.7em;font-weight:400;">EOSL.ai</a>
+  </h2>
+  {% if eosl %}
+    <table class="table table-hover attr-table">
+      <tr>
+        <th scope="row">Status</th>
+        <td><span class="badge text-bg-{{ eosl.state_css }}">{{ eosl.state_label }}</span></td>
+      </tr>
+      <tr>
+        <th scope="row">Part number</th>
+        <td><code>{{ eosl.part }}</code></td>
+      </tr>
+      {% if eosl.end_of_sale %}
+      <tr>
+        <th scope="row">End of sale</th>
+        <td>{{ eosl.end_of_sale }}</td>
+      </tr>
+      {% endif %}
+      <tr>
+        <th scope="row">End of service life</th>
+        <td>{% if eosl.eosl %}{{ eosl.eosl }}{% else %}<span class="text-muted">Not published</span>{% endif %}</td>
+      </tr>
+      {% if eosl.exposure_score is not None %}
+      <tr>
+        <th scope="row">EOSL Exposure Score</th>
+        <td>{{ eosl.exposure_score }}/100 <span class="text-muted">({{ eosl.exposure_band }})</span></td>
+      </tr>
+      {% endif %}
+      {% if eosl.source_url %}
+      <tr>
+        <th scope="row">Vendor bulletin</th>
+        <td><a href="{{ eosl.source_url }}" target="_blank" rel="noopener">Source&nbsp;&raquo;</a></td>
+      </tr>
+      {% endif %}
+    </table>
+    <div class="card-footer text-end">
+      <a href="{{ eosl.page_url }}" target="_blank" rel="noopener" class="btn btn-sm btn-primary">View on EOSL.ai</a>
+    </div>
+  {% elif queried_part %}
+    <div class="card-body">
+      <p class="text-muted mb-2">
+        No exact end-of-life record for part number <code>{{ queried_part }}</code> in the EOSL.ai database.
+      </p>
+      <a href="{{ search_url }}" target="_blank" rel="noopener" class="btn btn-sm btn-outline-secondary">Search EOSL.ai</a>
+    </div>
+  {% else %}
+    <div class="card-body">
+      <p class="text-muted mb-0">
+        Set a <strong>part number</strong> on this device type to check its end-of-life status against EOSL.ai.
+      </p>
+    </div>
+  {% endif %}
+</div>

@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "netbox-eosl"
+version = "0.1.0"
+description = "Show source-backed hardware end-of-service-life status on NetBox Devices and Device Types, from EOSL.ai."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "Apache-2.0" }
+authors = [{ name = "EOSL.ai", email = "hello@eosl.ai" }]
+keywords = ["netbox", "netbox-plugin", "eosl", "end-of-life", "eol", "lifecycle", "dcim"]
+dependencies = ["requests>=2.25"]
+classifiers = [
+    "Framework :: Django",
+    "Intended Audience :: System Administrators",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Topic :: System :: Networking :: Monitoring",
+]
+
+[project.urls]
+Homepage = "https://eosl.ai/"
+"Data source" = "https://eosl.ai/api/"
+Source = "https://github.com/Kranny36/netbox-eosl"
+
+[tool.setuptools.packages.find]
+include = ["netbox_eosl*"]
+
+[tool.setuptools.package-data]
+netbox_eosl = ["templates/netbox_eosl/*.html"]
