@@ -2,7 +2,10 @@
 <div class="card">
   <h2 class="card-header">
     Hardware End-of-Life
-    <a href="https://eosl.ai/" target="_blank" rel="noopener" class="float-end text-muted" title="Data source: EOSL.ai" style="font-size:0.7em;font-weight:400;">EOSL.ai</a>
+    {# card-actions is NetBox 4.x's header slot; float-end ran the link into the title on 4.7. #}
+    <div class="card-actions">
+      <a href="https://eosl.ai/" target="_blank" rel="noopener" class="btn btn-ghost-secondary btn-sm" title="Data source: EOSL.ai">EOSL.ai</a>
+    </div>
   </h2>
   {% if eosl %}
     <table class="table table-hover attr-table">
@@ -14,6 +17,12 @@
         <th scope="row">Part number</th>
         <td><code>{{ eosl.part }}</code></td>
       </tr>
+      {% if eosl.matched_from %}
+      <tr>
+        <th scope="row">Matched from</th>
+        <td><code>{{ eosl.matched_from }}</code> <span class="text-muted">({% if eosl.matched_by_model %}device type model name{% else %}same hardware, different part number form{% endif %})</span></td>
+      </tr>
+      {% endif %}
       {% if eosl.end_of_sale %}
       <tr>
         <th scope="row">End of sale</th>

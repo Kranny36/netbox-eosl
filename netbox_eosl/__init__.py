@@ -6,7 +6,7 @@ guesses, so it cannot assert an end-of-life date NetBox isn't certain about.
 """
 from netbox.plugins import PluginConfig
 
-__version__ = "0.2.0"
+__version__ = "0.2.1"
 
 
 class EOSLConfig(PluginConfig):

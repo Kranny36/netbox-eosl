@@ -95,10 +95,12 @@ def lookup_part(part_number, vendor=None, model=None):
     exact, loose_index = _indexes()
     aliases = _load_aliases()
     rec = None
+    matched_from = None
     for candidate in (part_number, model):
         if candidate:
             rec = matching.match(candidate, vendor, exact, loose_index, aliases)
             if rec:
+                matched_from = candidate
                 break
     if not rec:
         return None
@@ -118,6 +120,11 @@ def lookup_part(part_number, vendor=None, model=None):
         "state_label": label,
         "state_css": css,
         "page_url": (_cfg("api_url").rstrip("/") + "/system/" + slug + "/") if slug else _cfg("api_url"),
+        # What NetBox held that produced the match, shown when it differs from the catalogued part
+        # (a vendor short code, a packaging variant, or the device type's model name), so a reader
+        # never sees a different part number with no explanation.
+        "matched_from": matched_from if matched_from != rec.get("p") else None,
+        "matched_by_model": bool(matched_from) and matched_from == model and matched_from != part_number,
     }
 
 

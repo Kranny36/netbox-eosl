@@ -1,8 +1,9 @@
 """`manage.py eosl_check` — audit your NetBox device types against EOSL.ai.
 
-Prints a summary of how many tracked device types are past end-of-service-life, ending soon,
-still active, or not found in the EOSL.ai database — plus the list of past-EOSL types with how
-many device instances you run. Read-only; changes nothing in NetBox.
+Prints a summary of how many tracked device types need action, are ending soon, are still
+supported or active, or are not found in the EOSL.ai database, then lists the device types that need
+action (past end-of-service-life, or close enough that EOSL.ai rates the runway as action recommended)
+with how many device instances you run. Read-only; changes nothing in NetBox.
 """
 from collections import Counter
 
@@ -19,7 +20,7 @@ class Command(BaseCommand):
         parser.add_argument(
             "--past-only",
             action="store_true",
-            help="Skip the summary; just list device types past end-of-service-life.",
+            help="Skip the summary; just list device types that need action (past or near end-of-service-life).",
         )
 
     def handle(self, *args, **options):
@@ -48,12 +49,12 @@ class Command(BaseCommand):
         total = sum(counts.values())
 
         if not options.get("past_only"):
-            self.stdout.write(self.style.MIGRATE_HEADING("EOSL.ai audit — {} device types".format(total)))
+            self.stdout.write(self.style.MIGRATE_HEADING("EOSL.ai audit: {} device types".format(total)))
             label = {
                 "risk": "Past / action recommended",
                 "watch": "Ending soon (plan/watch)",
                 "clear": "Tracked, supported",
-                "active": "Active — no EOL announced",
+                "active": "Active, no EOL announced",
                 "not_found": "Not found in EOSL.ai",
                 "no_part_number": "No part number set",
             }
@@ -63,22 +64,25 @@ class Command(BaseCommand):
 
         if past_rows:
             self.stdout.write("")
-            self.stdout.write(self.style.WARNING("Past end-of-service-life:"))
+            # One heading for both bands: "Action recommended" includes hardware whose last date of
+            # support is still ahead, so this list must never be headed "past end-of-service-life".
+            self.stdout.write(self.style.WARNING("Needs action (past end-of-service-life, or action recommended):"))
             for dt, rec in sorted(past_rows, key=lambda r: r[1].get("eosl") or ""):
                 try:
                     instances = dt.instances.count()
                 except Exception:
                     instances = "?"
                 self.stdout.write(
-                    "  {vendor} {model} ({part}) — EOSL {eosl} — {n} in service — {url}".format(
+                    "  {vendor} {model} ({part}): {status}, end of service life {eosl}, {n} in service, {url}".format(
                         vendor=rec.get("vendor") or (dt.manufacturer and dt.manufacturer.name) or "",
                         model=dt.model,
                         part=rec.get("part"),
-                        eosl=rec.get("eosl") or "n/a",
+                        status=rec.get("state_label"),
+                        eosl=rec.get("eosl") or "not published",
                         n=instances,
                         url=rec.get("page_url"),
                     )
                 )
         elif not options.get("past_only"):
             self.stdout.write("")
-            self.stdout.write(self.style.SUCCESS("No device types are past end-of-service-life. 🎉"))
+            self.stdout.write(self.style.SUCCESS("No device types need action."))
