@@ -29,10 +29,15 @@ class Command(BaseCommand):
 
         for dt in device_types:
             part = (dt.part_number or "").strip()
-            if not part:
+            model = (dt.model or "").strip()
+            if not part and not model:
                 counts["no_part_number"] += 1
                 continue
-            rec = lookup_part(part)
+            # The manufacturer turns on vendor-gated forms (Fortinet FG-60E, Meraki MX67C); without it
+            # the audit missed parts the device page matched. The model is tried when the part number
+            # finds nothing (HISTORY §82).
+            mfr = getattr(getattr(dt, "manufacturer", None), "name", "") or ""
+            rec = lookup_part(part, mfr, model)
             if not rec:
                 counts["not_found"] += 1
                 continue

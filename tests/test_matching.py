@@ -73,3 +73,48 @@ def test_matching():
 
 if __name__ == "__main__":
     sys.exit(0 if run() else 1)
+
+
+# ---- HISTORY §82: status bands, variant aliases, loose-key collisions -------------------------
+def test_little_or_no_runway_is_risk():
+    """71% of parts carry this band; it used to fall through to the neutral style."""
+    assert matching.classify({"xb": "Little or no runway"})[0] == "risk"
+    assert matching.classify({"xb": "Action recommended"})[0] == "risk"
+    assert matching.classify({"xb": "Watch"})[0] == "watch"
+    assert matching.classify({"a": 1, "xb": "Current"})[0] == "active"
+
+
+ALIAS_SKUS = SKUS + [
+    {"p": "EX4300-48T", "v": "Juniper", "f": "EX4300", "s": "juniper-ex4300", "eos": "2024-03", "eol": "2029-03", "xb": "Watch"},
+    {"p": "MX80-HW", "v": "Cisco Meraki", "f": "Cisco Meraki MX80", "s": "meraki-mx80", "eos": "2017-03", "eol": "2022-03", "xb": "Little or no runway"},
+    {"p": "GP-100", "v": "Palo Alto Networks", "f": "GlobalProtect", "s": "pa-gp-100", "xb": "Little or no runway"},
+    {"p": "GP100", "v": "Dell", "f": "Greenplum DCA", "s": "dell-greenplum", "xb": "Little or no runway"},
+]
+ALIASES = {"open": {"EX430048TTAA": "EX4300-48T"}, "gated": {"MX80": "MX80-HW"}}
+
+
+def _m(part, vendor):
+    exact, loose = matching.build_index(ALIAS_SKUS)
+    rec = matching.match(part, vendor, exact, loose, ALIASES)
+    return rec["p"] if rec else None
+
+
+def test_variant_alias_open():
+    assert _m("EX4300-48T-TAA", "Juniper Networks") == "EX4300-48T"
+    assert _m("EX4300-48T-TAA", None) == "EX4300-48T"
+
+
+def test_variant_alias_gated_needs_the_right_vendor():
+    assert _m("MX80", "Cisco") == "MX80-HW"          # NetBox's library files Meraki under "Cisco"
+    assert _m("MX80", "Juniper") is None              # a Juniper MX80 router is not a Meraki MX80
+    assert _m("MX80", None) is None
+
+
+def test_loose_key_shared_by_two_families_does_not_resolve():
+    assert _m("GP-100", "Palo Alto Networks") == "GP-100"   # exact still wins
+    assert _m("GP 100", None) is None                        # GP100 (Dell) vs GP-100 (Palo Alto)
+
+
+def test_without_aliases_behaviour_is_unchanged():
+    exact, loose = matching.build_index(ALIAS_SKUS)
+    assert matching.match("EX4300-48T-TAA", "Juniper", exact, loose) is None

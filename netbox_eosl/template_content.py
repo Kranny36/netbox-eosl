@@ -11,12 +11,12 @@ def _manufacturer_name(device_type):
     return getattr(mfr, "name", "") or ""
 
 
-def _panel(extension, part_number, vendor):
+def _panel(extension, part_number, vendor, model=""):
     """Shared renderer for both models."""
     return extension.render(
         _TEMPLATE,
         extra_context={
-            "eosl": lookup_part(part_number, vendor),
+            "eosl": lookup_part(part_number, vendor, model),
             "queried_part": part_number,
             "search_url": search_url(part_number),
         },
@@ -31,7 +31,7 @@ class DeviceEOSL(PluginTemplateExtension):
         # A device's ordering PID + manufacturer live on its device type.
         device_type = getattr(device, "device_type", None)
         part = getattr(device_type, "part_number", "") or ""
-        return _panel(self, part, _manufacturer_name(device_type))
+        return _panel(self, part, _manufacturer_name(device_type), getattr(device_type, "model", "") or "")
 
 
 class DeviceTypeEOSL(PluginTemplateExtension):
@@ -40,7 +40,7 @@ class DeviceTypeEOSL(PluginTemplateExtension):
     def right_page(self):
         device_type = self.context["object"]
         part = getattr(device_type, "part_number", "") or ""
-        return _panel(self, part, _manufacturer_name(device_type))
+        return _panel(self, part, _manufacturer_name(device_type), getattr(device_type, "model", "") or "")
 
 
 template_extensions = [DeviceEOSL, DeviceTypeEOSL]

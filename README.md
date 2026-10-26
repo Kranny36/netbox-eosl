@@ -5,7 +5,7 @@ Device Types, straight from [EOSL.ai](https://eosl.ai) — where every date link
 own end-of-life bulletin.
 
 A panel appears on the right side of each Device and Device Type page: end-of-sale date,
-end-of-service-life date, the EOSL Exposure Score, a link to the vendor bulletin, and a link to
+end-of-service-life date, the Support Runway Score, a link to the vendor bulletin, and a link to
 the full EOSL.ai model page. A `manage.py eosl_check` command audits your whole inventory.
 
 Matching is **exact part-number only** — the plugin never fuzzy-matches, so it can't put a wrong

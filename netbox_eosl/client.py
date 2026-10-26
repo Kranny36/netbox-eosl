@@ -16,6 +16,7 @@ from . import matching
 logger = logging.getLogger("netbox.plugins.netbox_eosl")
 
 _SKU_CACHE_KEY = "netbox_eosl:skus:v2"
+_ALIAS_CACHE_KEY = "netbox_eosl:aliases:v1"
 # In-process memo of the built indexes, rebuilt only when the sku set changes.
 _MEMO = {"token": None, "idx": (None, None)}
 
@@ -35,7 +36,7 @@ def _load_skus():
         resp = requests.get(
             url,
             timeout=_cfg("request_timeout"),
-            headers={"User-Agent": "netbox-eosl/0.1 (+https://eosl.ai)"},
+            headers={"User-Agent": "netbox-eosl/0.2 (+https://eosl.ai)"},
         )
         resp.raise_for_status()
         skus = resp.json().get("skus", [])
@@ -48,6 +49,29 @@ def _load_skus():
     return skus
 
 
+def _load_aliases():
+    """Return https://eosl.ai/data/aliases.json (variant aliases, HISTORY §82), cached, or None.
+
+    Optional by design: when it cannot be fetched, matching is exactly what it was without it.
+    """
+    al = cache.get(_ALIAS_CACHE_KEY)
+    if al is not None:
+        return al or None
+    url = _cfg("api_url").rstrip("/") + "/data/aliases.json"
+    try:
+        resp = requests.get(url, timeout=_cfg("request_timeout"),
+                            headers={"User-Agent": "netbox-eosl/0.2 (+https://eosl.ai)"})
+        resp.raise_for_status()
+        data = resp.json()
+        al = {"open": data.get("open") or {}, "gated": data.get("gated") or {}}
+    except (requests.RequestException, ValueError) as exc:
+        logger.info("netbox-eosl: no alias table from %s (%s); matching without it", url, exc)
+        cache.set(_ALIAS_CACHE_KEY, {}, 300)
+        return None
+    cache.set(_ALIAS_CACHE_KEY, al, _cfg("cache_timeout"))
+    return al
+
+
 def _indexes():
     """(exact, loose) indexes, rebuilt in-process only when the sku count changes."""
     skus = _load_skus()
@@ -58,16 +82,24 @@ def _indexes():
     return _MEMO["idx"]
 
 
-def lookup_part(part_number, vendor=None):
+def lookup_part(part_number, vendor=None, model=None):
     """Resolve one part number (optionally with its NetBox manufacturer name) to a display dict, or None.
 
-    Passing `vendor` enables vendor-gated aliases (e.g. Fortinet FG-60E -> FortiGate-60E) without risking
-    a cross-vendor false match. The returned dict is safe to hand straight to the template.
+    Passing `vendor` enables vendor-gated aliases (e.g. Fortinet FG-60E -> FortiGate-60E, Meraki MX67C ->
+    MX67C-HW-NA) without risking a cross-vendor false match. `model` is the device type's model name,
+    tried only when the part number finds nothing: NetBox's own device-type library leaves some part
+    numbers blank and names the product in the model ("PowerEdge R640"). Same matcher, same rules.
     """
-    if not part_number:
+    if not part_number and not model:
         return None
     exact, loose_index = _indexes()
-    rec = matching.match(part_number, vendor, exact, loose_index)
+    aliases = _load_aliases()
+    rec = None
+    for candidate in (part_number, model):
+        if candidate:
+            rec = matching.match(candidate, vendor, exact, loose_index, aliases)
+            if rec:
+                break
     if not rec:
         return None
     state, label, css = matching.classify(rec)
